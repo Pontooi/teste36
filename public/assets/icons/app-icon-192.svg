@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <defs>
+    <linearGradient id="pwa-bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0e1626" />
+      <stop offset="100%" stop-color="#070c14" />
+    </linearGradient>
+    <linearGradient id="pwa-icon-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffbe82" />
+      <stop offset="100%" stop-color="#6fb7db" />
+    </linearGradient>
+  </defs>
+  <!-- Background com bordas arredondadas padrão mobile squircle -->
+  <rect width="192" height="192" rx="42" fill="url(#pwa-bg-grad)" stroke="#1e293b" stroke-width="4"/>
+  <!-- Ícone Code2 em destaque central -->
+  <g transform="translate(36, 36)" stroke="url(#pwa-icon-grad)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <polyline points="40 25 10 60 40 95" />
+    <polyline points="80 25 110 60 80 95" />
+    <line x1="72" y1="15" x2="48" y2="105" />
+  </g>
+</svg>

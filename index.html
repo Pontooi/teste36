@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>DualDev - Academia de Programação</title>
+    <meta name="description" content="Aprenda Java, Python, JavaScript, HTML e CSS na prática com lições interativas, editor de código e execução em tempo real." />
+    <meta property="og:title" content="DualDev - Academia de Programação" />
+    <meta property="og:description" content="Aprenda Java, Python, JavaScript, HTML e CSS na prática com lições interativas, editor de código e execução em tempo real." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- Configurações PWA e Mobile para rodar no Celular como Aplicativo -->
+    <meta name="theme-color" content="#0e1626" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="DualDev" />
+    <link rel="manifest" href="./manifest.json" />
+    <link rel="apple-touch-icon" href="./assets/icons/app-icon-192.svg" />
+    <link rel="icon" type="image/svg+xml" href="./assets/icons/app-icon-192.svg" />
+
+    <script>
+      // Garante a barra final na URL do repositório no GitHub Pages para que assets relativos nunca dêem 404
+      if (window.location.pathname.split('/').pop().indexOf('.') === -1 && !window.location.pathname.endsWith('/')) {
+        window.location.replace(window.location.pathname + '/' + window.location.search + window.location.hash);
+      }
+    </script>
+  </head>
+  <body class="min-h-screen bg-[#0b101b] text-slate-100 selection:bg-[#ffbe82]/30 selection:text-white">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

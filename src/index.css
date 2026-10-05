@@ -1,0 +1,138 @@
+@import "tailwindcss";
+
+/* 
+ * DualDev - Estética Dark Pastel (100% Modo Escuro)
+ * 
+ * Filosofia Visual:
+ * - Modo Claro eliminado definitivamente. A aplicação opera exclusivamente em Dark Mode refinado.
+ * - Paleta de Cores em Tons Pastéis Suaves e Aconchegantes:
+ *   • #ffbe82: Pêssego Pastel / Damasco Suave (botões primários de ação, badges e destaques calorosos)
+ *   • #9FD6F2: Azul Celeste Pastel (bordas delicadas, realces luminosos e títulos)
+ *   • #6fb7db: Azul Cerúleo Pastel (seletores de linguagem, abas ativas e links)
+ *   • #86efac / #34d399: Menta Pastel (testes aprovados e lições concluídas)
+ *   • #fca5a5: Rosa Pastel (mensagens de erro de execução no terminal)
+ */
+
+:root {
+  --color-peach-pastel: #ffbe82;
+  --color-sky-pastel: #9FD6F2;
+  --color-cerulean-pastel: #6fb7db;
+  --color-mint-pastel: #86efac;
+}
+
+@layer base {
+  body {
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    margin: 0;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: #0b101b;
+    color: #f1f5f9;
+    letter-spacing: -0.01em;
+  }
+
+  code, pre, .font-mono {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Courier New', monospace;
+  }
+}
+
+/* Cartão Dark Pastel: Superfície em ardósia profundo (#0f172a) com borda suave em celeste pastel */
+.aero-card {
+  position: relative;
+  border-radius: 10px;
+  background: #0f172a;
+  border: 1px solid rgba(159, 214, 242, 0.12);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.35), 0 4px 16px -2px rgba(0, 0, 0, 0.45);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.aero-card:hover {
+  border-color: rgba(159, 214, 242, 0.28);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.6);
+}
+
+/* Botão Primário: Pêssego Pastel (#ffbe82) com contraste escuro nítido */
+.aero-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #ffbe82;
+  color: #171007;
+  border-radius: 7px;
+  border: 1px solid #fca35d;
+  font-weight: 600;
+  box-shadow: 0 1px 3px 0 rgba(255, 190, 130, 0.25);
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.aero-btn-primary:hover {
+  background-color: #fca35d;
+  box-shadow: 0 2px 8px -1px rgba(255, 190, 130, 0.45);
+}
+
+.aero-btn-primary:active {
+  transform: translateY(0);
+}
+
+/* Botão Secundário Pastel: Superfície de vidro escuro com texto e borda celeste */
+.aero-btn-glass {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #141f30;
+  color: #9FD6F2;
+  border: 1px solid rgba(159, 214, 242, 0.2);
+  border-radius: 7px;
+  font-weight: 500;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.25);
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.aero-btn-glass:hover {
+  background-color: #1b2a40;
+  border-color: #9FD6F2;
+  color: #ffffff;
+}
+
+/* Botão de Sucesso: Menta Pastel (#34d399) */
+.aero-btn-success {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #34d399;
+  color: #022c22;
+  border-radius: 7px;
+  border: 1px solid #10b981;
+  font-weight: 600;
+  box-shadow: 0 1px 3px 0 rgba(52, 211, 153, 0.3);
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.aero-btn-success:hover {
+  background-color: #10b981;
+  color: #ffffff;
+  box-shadow: 0 2px 8px -1px rgba(16, 185, 129, 0.45);
+}
+
+/* Barra de rolagem minimalista */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}

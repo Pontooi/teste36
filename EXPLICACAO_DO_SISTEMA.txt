@@ -1,0 +1,490 @@
+================================================================================
+     DUALDEV ACADEMY - MANUAL TÉCNICO EXAUSTIVO DE ARQUITETURA E CÓDIGO FONTE
+================================================================================
+
+Este documento é um guia aprofundado, técnico e minucioso de cada arquivo, 
+função, variável de estado, expressão regular e fluxo de dados do projeto DualDev.
+Ele foi escrito para que qualquer desenvolvedor entenda com 100% de clareza o que 
+cada linha faz, como o código foi estruturado e como tudo se conecta.
+
+================================================================================
+SUMÁRIO
+================================================================================
+1. ARQUITETURA GERAL E FLUXO DE EXECUÇÃO
+2. CAMADA DE CONFIGURAÇÃO E AMBIENTE (RAIZ)
+3. MODELAGEM DE DADOS E TIPAGEM (/src/types)
+4. O CÉREBRO DA APLICAÇÃO: ESTADO GLOBAL (/src/context/DualDevContext.tsx)
+5. OS MOTORES DE EXECUÇÃO DE CÓDIGO NO NAVEGADOR (/src/services/runners/)
+   5.1. javaRunner.ts (Simulador de JVM, Parser e AST simplificada)
+   5.2. pythonRunner.ts (Interpretador de Indentação, Tipos e Funções)
+   5.3. jsRunner.ts (Sandbox de Avaliação com Interceptação de Streams)
+   5.4. webRunner.ts (Validador Semântico de HTML5 e Regras CSS3)
+   5.5. index.ts (Despachante e Roteador de Runners)
+6. CAMADA DE DADOS DIDÁTICOS E GAMIFICAÇÃO (/src/data/)
+   6.1. lessons.ts (Estrutura das Lições e Validadores)
+   6.2. tracks.ts (Catálogo das 5 Trilhas)
+   6.3. snippets.ts (Base de IntelliSense do Editor)
+   6.4. missions.ts (Missões Diárias)
+   6.5. achievements.ts (Sistema de Medalhas)
+7. COMPONENTES VISUAIS E LÓGICA DE INTERFACE (/src/components/)
+   7.1. CodeEditor.tsx (IDE Completa, Cursor, Teclas e Autocomplete)
+   7.2. ConsoleOutput.tsx (Terminal e Avaliador de Testes Automatizados)
+   7.3. TheoryPanel.tsx (Parser Markdown e Renderizador de Instruções)
+   7.4. Navbar.tsx (Cabeçalho de Controle e Estatísticas)
+   7.5. LanguageIcon.tsx (Renderizador Vetorial de Linguagens)
+8. PÁGINAS DA APLICAÇÃO (/src/pages/)
+   8.1. AcademiaPage.tsx (Sala de Aula Interativa e Layout 3 Painéis)
+   8.2. HomePage.tsx (Página Inicial e Catálogo de Trilhas)
+   8.3. ConquistasPage.tsx (Central de Gamificação e Missões)
+   8.4. PlaygroundPage.tsx (Ambiente Livre Multilinguagem)
+   8.5. SobrePage.tsx (Página Institucional)
+9. ESTILIZAÇÃO E DESIGN SYSTEM DARK PASTEL (/src/index.css e /src/App.tsx)
+10. PASSO A PASSO DE UM FLUXO COMPLETO (Tracing de uma ação do usuário)
+
+================================================================================
+1. ARQUITETURA GERAL E FLUXO DE EXECUÇÃO
+================================================================================
+
+O DualDev é uma Single Page Application (SPA) construída com React 19, TypeScript
+e Tailwind CSS, empacotada pelo Vite.
+
+Diferente de plataformas como LeetCode ou HackerRank que enviam o código para
+contêineres Docker remotos em servidores Linux caros, o DualDev adota uma
+arquitetura CLIENT-SIDE COMPLETA:
+- 0 requisições de rede para compilar código;
+- 0 latência de servidor (execução em tempo real entre 2ms e 25ms);
+- Segurança total: o código do usuário não toca em nenhum servidor externo;
+- Todo o armazenamento é feito via Web Storage API (localStorage) do navegador.
+
+O fluxo de dados segue o padrão unidirecional do React:
+[Usuário digita] -> [CodeEditor atualiza LocalStorage] -> [Usuário clica em Testar] 
+-> [Runner processa texto] -> [TestCase valida Regex/Stdout] -> [Context distribui XP] 
+-> [UI reflete novo nível e medalhas instantaneamente].
+
+================================================================================
+2. CAMADA DE CONFIGURAÇÃO E AMBIENTE (RAIZ)
+================================================================================
+
+• package.json:
+  - Define o manifesto do projeto.
+  - Dependências principais:
+    * `react` e `react-dom` (versão 19): Núcleo da interface reativa.
+    * `lucide-react`: Biblioteca de ícones SVG leves e configuráveis.
+    * `tailwindcss` e `@tailwindcss/vite`: Compilação de classes utilitárias sem arquivos CSS inchados.
+  - Scripts:
+    * `dev`: Inicializa o servidor Vite local na porta 3000.
+    * `build`: Roda o compilador TypeScript (`tsc`) e gera o bundle de produção otimizado na pasta `/dist`.
+    * `lint`: Executa `tsc --noEmit` para validação estática estrita de tipos sem gerar arquivos.
+
+• vite.config.ts:
+  - Arquivo de configuração do compilador Vite.
+  - Configura os plugins `@vitejs/plugin-react` e `@tailwindcss/vite`.
+  - Configura o servidor de desenvolvimento para rodar na porta 3000 e escutar em `0.0.0.0` (acessível via contêineres e Cloud Run).
+
+• tsconfig.json:
+  - Configurações do compilador TypeScript:
+    * `"target": "ES2022"`: Permite utilizar sintaxes modernas de JS (Optional Chaining, Nullish Coalescing, etc.).
+    * `"moduleResolution": "bundler"`: Resolução de módulos otimizada para o Vite.
+    * `"strict": true`: Ativa todas as checagens estritas de tipo (proíbe `any` implícito, valida nulos e indefinidos).
+    * `"jsx": "react-jsx"`: Habilita o novo JSX Transform do React sem necessidade de importar `React` em todo arquivo.
+
+• index.html:
+  - O ponto de ancoragem do DOM (`<div id="root"></div>`).
+  - Carrega as fontes tipográficas profissionais da Google Fonts:
+    * 'Inter': Tipografia para títulos, textos explicativos e botões.
+    * 'JetBrains Mono': Tipografia com largura fixa (monospace) para o editor de código e terminal.
+  - Carrega o script raiz: `<script type="module" src="/src/main.tsx"></script>`.
+
+• metadata.json:
+  - Configuração do projeto dentro da plataforma AI Studio contendo o nome da aplicação ("DualDev"), descrição e permissões de runtime.
+
+================================================================================
+3. MODELAGEM DE DADOS E TIPAGEM (/src/types/index.ts)
+================================================================================
+
+Este arquivo é o contrato da aplicação. Todas as interfaces e tipos que circulam
+entre componentes, serviços e banco local estão definidos aqui:
+
+• `export type TrackId = 'java' | 'python' | 'javascript' | 'html' | 'css';`
+  Define as 5 linguagens suportadas. O TypeScript impede em tempo de compilação
+  que qualquer desenvolvedor passe uma string inválida como 'csharp' ou 'ruby'.
+
+• `export interface TestCase`:
+  Representa um caso de teste que valida o exercício:
+  - `id: string`: Identificador único (ex: 'test-1').
+  - `description: string`: Texto amigável (ex: 'Exibir a mensagem solicitada').
+  - `validator?: (code: string, stdout: string) => { passed: boolean; message: string }`:
+    Função validadora pura que recebe o código-fonte escrito pelo aluno e a saída
+    capturada no terminal, retornando um booleano de sucesso e mensagem explicativa.
+
+• `export interface Lesson`:
+  Representa a lição completa:
+  - `id: string`: ID único (ex: 'java-class-main').
+  - `trackId: TrackId`: Linguagem à qual pertence.
+  - `title: string`: Nome da lição.
+  - `category: string`: Categoria (Fundamentos, Controle de Fluxo, etc.).
+  - `difficulty: 'Iniciante' | 'Intermediário' | 'Avançado'`.
+  - `estimatedMinutes: number`: Tempo estimado de resolução.
+  - `xp: number`: Quantidade de pontos concedidos ao concluir.
+  - `theory: string`: Texto formatado em pseudo-markdown com a explicação técnica.
+  - `instructions: string`: O que exatamente o aluno deve implementar.
+  - `initialCode: string`: Código que já vem escrito no editor ao abrir o exercício.
+  - `solutionCode: string`: Código da solução oficial sugerida.
+  - `testCases: TestCase[]`: Lista de testes que precisam passar.
+  - `hints: string[]`: Lista de dicas progressivas para desbloqueio caso haja dúvida.
+
+• `export interface ExecutionResult`:
+  O que qualquer runner devolve após rodar:
+  - `stdout: string`: Saída padrão do programa (o que foi impresso).
+  - `stderr: string`: Mensagens de erro de compilação ou execução.
+  - `executionTimeMs: number`: Tempo decorrido em milissegundos.
+
+• `export interface Mission`:
+  Representa as missões diárias com barra de progresso (ex: progresso 1/3, target 3).
+
+• `export interface Achievement`:
+  Representa as medalhas desbloqueáveis (id, título, descrição, xpReward, unlockedAt).
+
+================================================================================
+4. O CÉREBRO DA APLICAÇÃO: ESTADO GLOBAL (/src/context/DualDevContext.tsx)
+================================================================================
+
+Este arquivo gerencia todo o estado reativo da aplicação e sua persistência.
+Ele usa o padrão React Context API (`createContext` e `useContext`).
+
+Principais partes do código:
+
+1. Funções Utilitárias de Leitura Segura:
+   - `getSafeItem<T>(key, fallback)`: Faz `localStorage.getItem()`, passa pelo `JSON.parse()`.
+     Se o item não existir ou o JSON estiver quebrado, captura o erro com `catch` e
+     retorna o valor padrão (`fallback`) sem deixar o app quebrar.
+   - `getSafeNumber(key, fallback)`: Lê e faz `parseInt()`, verificando `isNaN()`.
+
+2. Variáveis de Estado (`useState`):
+   - `theme`: Travado em `'dark'` para cumprir a estética definitiva do sistema.
+   - `activeTab`: Controla qual tela principal está montada ('inicio', 'academia', 'playground', 'conquistas', 'sobre').
+   - `currentTrackId`: Linguagem selecionada no momento (padrão: 'java').
+   - `currentLessonId`: ID da aula ativa (padrão: 'java-class-main').
+   - `userXp`: Total de experiência do aluno lido de `dualdev_xp` (padrão inicial: 120).
+   - `userLevel`: Nível calculado via fórmula matemática: `Math.floor(userXp / 150) + 1`.
+   - `completedLessonIds`: Lista de strings com os IDs das aulas já feitas (`dualdev_completed_lessons`).
+   - `codeDrafts`: Dicionário chave-valor `{ [lessonId]: string }` guardando rascunhos inacabados.
+   - `missions`: Lista de missões diárias com seu progresso atual.
+   - `achievements`: Lista de conquistas com timestamps de desbloqueio.
+
+3. Funções de Mutação do Estado:
+   - `saveDraft(lessonId, code)`: Atualiza o dicionário de rascunhos e salva no localStorage.
+   - `resetDraft(lessonId)`: Remove o rascunho salvo daquela aula para que ela volte ao `initialCode`.
+   - `completeLesson(lessonId)`:
+     1. Checa se a lição já foi concluída antes para impedir ganho de XP duplicado.
+     2. Adiciona o ID ao array `completedLessonIds`.
+     3. Incrementa `userXp` com `targetLesson.xp`.
+     4. Avança a missão diária 'm1' ("Concluir Lição"). Se atingir o alvo, bonifica com o XP da missão.
+     5. Dispara `checkAchievementsOnLessonComplete()`: se o aluno completou sua 1ª aula ou 5ª aula,
+        marca a medalha correspondente com `new Date().toISOString()`.
+   - `recordCodeExecution(trackId)`: Chamada toda vez que o botão "Executar" ou "Verificar" roda.
+     Avança a missão diária 'm2' ("Executar códigos").
+   - `nextLesson()` e `prevLesson()`: Localiza o índice da lição atual na trilha e avança ou recua.
+
+================================================================================
+5. OS MOTORES DE EXECUÇÃO DE CÓDIGO NO NAVEGADOR (/src/services/runners/)
+================================================================================
+
+Esta pasta é uma das engenharias mais avançadas do projeto. Ela transforma
+código bruto em saídas estruturadas sem nenhum backend.
+
+--------------------------------------------------------------------------------
+5.1. javaRunner.ts (Simulador de JVM no Navegador)
+--------------------------------------------------------------------------------
+Como funciona:
+1. `validateSyntax(code)`:
+   - Verifica se os pares de chaves `{}` e parênteses `()` estão balanceados através de contadores.
+   - Checa se linhas de instruções terminam com ponto e vírgula `;`, ignorando linhas
+     de abertura de bloco `{`, fechamento `}`, anotações `@` ou instruções de controle `for`/`if`.
+   - Se faltar um `;`, gera um erro formatado idêntico ao do `javac`:
+     `Erro de compilação: ';' esperado na linha X`.
+
+2. `extractClassesAndMethods(code)`:
+   - Usa expressões regulares para identificar a classe principal (`public class Main`).
+   - Localiza o ponto de entrada: `public static void main(String[] args)`.
+   - Localiza outros métodos estáticos auxiliares (ex: `public static int somar(int a, int b)`).
+
+3. `executeJavaVirtualMachine(code)`:
+   - Mantém uma tabela de símbolos (memória de variáveis): `scope: Map<string, any>`.
+   - Reconhece tipos primitivos de Java: `int`, `double`, `float`, `boolean`, `String`, `char` e arrays (`int[]`, `String[]`).
+   - Interpreta loops `for (int i = 0; i < N; i++)` e loops for-each `for (String s : array)`.
+   - Interpreta condicionais `if (condição) { ... } else { ... }`.
+   - Interpreta comandos de impressão:
+     * `System.out.println(expressão)`: Avalia a expressão, concatena strings com números e imprime com quebra de linha.
+     * `System.out.print(expressão)`: Imprime sem quebra de linha.
+     * `System.out.printf(formato, args)`: Substitui `%d`, `%f`, `%.2f` e `%s` pelos argumentos correspondentes.
+   - Proteção contra loop infinito: possui contador limite de 10.000 iterações. Se ultrapassar, interrompe
+     com `RuntimeError: Limite de iterações excedido (Loop infinito detectado)`.
+
+--------------------------------------------------------------------------------
+5.2. pythonRunner.ts (Interpretador de Python)
+--------------------------------------------------------------------------------
+Como funciona:
+1. Análise de Indentação:
+   - Em Python, blocos de código não usam `{}` mas sim espaços no início da linha.
+   - O interpretador calcula a profundidade de cada linha contando múltiplos de 4 espaços ou Tabs.
+
+2. Avaliação de Instruções:
+   - Processa atribuição de variáveis: `x = 10`, `nome = "DualDev"`, `lista = [1, 2, 3]`.
+   - Funções nativas simuladas: `len()`, `sum()`, `max()`, `min()`, `range()`, `int()`, `str()`.
+   - Avaliação de F-Strings: Converte strings no formato `f"Olá, {nome}, você tem {pontos} pontos"`
+     para seus valores reais interpolados.
+   - Loops `for item in lista:` e `for i in range(inicio, fim):`.
+   - Condicionais `if`, `elif` e `else` com operadores lógicos `and`, `or`, `not`.
+   - Definição de funções `def nome_funcao(args):` com armazenamento do corpo e instrução `return`.
+
+--------------------------------------------------------------------------------
+5.3. jsRunner.ts (Sandbox JavaScript)
+--------------------------------------------------------------------------------
+Como funciona:
+1. Interceptação do Console:
+   - Guarda o ponteiro original de `window.console.log`, `console.error`, `console.warn` e `console.info`.
+   - Substitui por funções espiãs que acumulam as mensagens de saída em um array `outputLines: string[]`.
+   - Objetos e arrays são automaticamente serializados via `JSON.stringify(item, null, 2)` para exibição limpa.
+
+2. Execução Segura:
+   - Encapsula o código do usuário em uma função anônima com `use strict`.
+   - Executa via construtor `new Function(...)`.
+   - Um bloco `finally` garante que o `console.log` nativo do navegador SEMPRE seja restaurado,
+     mesmo que o código do aluno lance uma exceção não tratada.
+
+--------------------------------------------------------------------------------
+5.4. webRunner.ts (Validador de HTML e CSS)
+--------------------------------------------------------------------------------
+Como funciona:
+- Para HTML: Cria um documento em memória utilizando a API nativa `DOMParser()`:
+  `const doc = new DOMParser().parseFromString(htmlCode, 'text/html');`
+- Analisa erros de árvore com `doc.querySelector('parsererror')`.
+- Confere a hierarquia de tags obrigatórias: `<!DOCTYPE html>`, `<html>`, `<head>`, `<body>`, tags semânticas `<header>`, `<main>`, `<nav>`, `<footer>`.
+- Para CSS: Analisa declarações de regras (seletores e propriedades `flex`, `grid`, `padding`, etc.) via expressões regulares.
+
+--------------------------------------------------------------------------------
+5.5. index.ts (Despachante)
+--------------------------------------------------------------------------------
+Exporta a função pública `executeCode(trackId, code)`:
+- Inicia a contagem de tempo com `performance.now()`.
+- Roteia através de um `switch (trackId)` para o runner respectivo.
+- Calcula `executionTimeMs = Math.round(performance.now() - startTime)`.
+- Devolve o objeto padronizado `ExecutionResult`.
+
+================================================================================
+6. CAMADA DE DADOS DIDÁTICOS E GAMIFICAÇÃO (/src/data/)
+================================================================================
+
+• lessons.ts:
+  - Contém as aulas detalhadas para cada linguagem.
+  - Cada lição possui:
+    * `theory`: Escrita didaticamente, dividida com `### ` para tópicos principais,
+      `#### ` para subtítulos e blocos de código cercados por ```.
+    * `testCases`: Cada teste é composto por uma descrição clara e um `validator`.
+      Exemplo prático de validador em Java:
+      ```typescript
+      validator: (code, stdout) => {
+        const hasClass = /public\s+class\s+Main/.test(code);
+        const hasMain = /public\s+static\s+void\s+main/.test(code);
+        const hasPrint = /System\.out\.println\(["'].*?["']\)/.test(code);
+        if (!hasClass) return { passed: false, message: 'Falta a classe public class Main.' };
+        if (!hasMain) return { passed: false, message: 'Falta o método main.' };
+        if (!hasPrint) return { passed: false, message: 'Use System.out.println para exibir a mensagem.' };
+        return { passed: true, message: 'Estrutura Java implementada com perfeição!' };
+      }
+      ```
+  - Isso garante validação dupla: tanto a estrutura sintática (código escrito)
+    quanto o comportamento dinâmico (o que foi gerado no terminal).
+
+• snippets.ts:
+  - Mapeia atalhos de código para aceleração de digitação:
+    * Java: 'sout' -> `System.out.println($1);`, 'main' -> `public static void main(String[] args) {\n    $1\n}`.
+    * Python: 'def' -> `def funcao():\n    pass`, 'for' -> `for i in range(10):\n    print(i)`.
+    * JS: 'clg' -> `console.log($1);`, 'af' -> `const fn = () => {\n    $1\n};`.
+
+• missions.ts e achievements.ts:
+  - Metadados de gamificação: pontos de XP atribuídos por cada conquista e critérios de desbloqueio.
+
+================================================================================
+7. COMPONENTES VISUAIS E LÓGICA DE INTERFACE (/src/components/)
+================================================================================
+
+--------------------------------------------------------------------------------
+7.1. CodeEditor.tsx
+--------------------------------------------------------------------------------
+Um dos componentes mais ricos do projeto:
+- Gerenciamento de Cursor e Texto:
+  Utiliza um elemento `<textarea>` transparente sobreposto com estilizações monospace puras.
+  A propriedade `spellCheck={false}`, `autoCapitalize="off"` e `autoCorrect="off"`
+  desativa corretores ortográficos do navegador que atrapalhariam a digitação de código.
+- Numeração de Linhas Dinâmica:
+  Calcula `lines = code.split('\n')`. Renderiza uma coluna lateral `#070c14` com os números
+  de 1 até `lineCount`, perfeitamente alinhados na altura da linha (`leading-6`).
+- Captura de Tabulação (`handleKeyDown`):
+  Por padrão, pressionar <Tab> em um formulário HTML pula para o próximo campo.
+  O `CodeEditor` intercepta o evento com `e.preventDefault()`, captura a posição atual
+  com `textarea.selectionStart` e insere exatamente 4 espaços de indentação, reposicionando
+  o cursor logo após os espaços inseridos na animação de frame seguinte (`requestAnimationFrame`).
+- Sistema de IntelliSense / Autocomplete:
+  Ao digitar, a função `updateSuggestions` analisa os caracteres antes do cursor com a regex
+  `/([a-zA-Z0-9_]+)$/`. Se houver correspondência com os snippets da linguagem, abre uma
+  janela flutuante (`aero-card`) logo acima do cursor.
+  Permite navegar pelas sugestões com as setas para Cima/Baixo e confirmar com <Tab> ou <Enter>.
+- Atalho Global de Execução:
+  Pressionar <Ctrl> + <Enter> ou <Cmd> + <Enter> dispara imediatamente `onRun()`.
+
+--------------------------------------------------------------------------------
+7.2. ConsoleOutput.tsx
+--------------------------------------------------------------------------------
+Painel com abas inteligentes:
+- Aba "Terminal":
+  Exibe a saída padrão em azul celeste pastel (`#9FD6F2`).
+  Se houver erro de compilação ou execução (`result.stderr`), monta um card de erro
+  com bordas em tom de rubi e texto em rosa pastel (`#fca5a5`), indicando a linha e o motivo.
+- Aba "Testes":
+  Exibe um cabeçalho verde com ícone de celebração quando todos os testes passam.
+  Lista cada teste unitário com distintivo verde "PASSOU" ou vermelho "FALHOU",
+  junto com a mensagem explicativa devolvida pelo validador.
+- Botão Limpar:
+  Ícone de lixeira que limpa o histórico de execuções da tela.
+- Tempo de Execução:
+  Exibe com precisão o tempo gasto (ex: `12ms`).
+
+--------------------------------------------------------------------------------
+7.3. TheoryPanel.tsx
+--------------------------------------------------------------------------------
+Painel didático da sala de aula:
+- Parser de Teoria:
+  Lê o texto bruto da aula e o quebra por quebras de linha duplas (`\n\n`).
+  - Linhas com `### ` viram títulos H3 estilizados com uma barra decorativa lateral em Cerúleo Pastel (`#6fb7db`).
+  - Linhas com `#### ` viram subtítulos H4 em letras maiúsculas discretas.
+  - Linhas com ``` viram blocos de código estáticos formatados com fundo `#070e17` e fonte mono.
+  - Demais linhas viram parágrafos com entrelinha relaxada (`leading-relaxed`).
+- Caixa de Objetivo:
+  Um card com destaque sutil em Azul Celeste (`bg-sky-950/25 border-sky-900/50`)
+  detalhando com precisão o que o aluno deve programar.
+- Sanfona de Dicas ("Precisa de ajuda?"):
+  Permite que o aluno abra dicas caso fique travado sem entregar a resposta de primeira.
+  Dentro da última dica, há um botão "Ver código da solução sugerida" que chama `onLoadSolution()`
+  e preenche o editor com o código gabarito caso o aluno queira estudar a resolução.
+- Rodapé de Navegação:
+  Botões "Anterior" e "Próxima Lição" desabilitados automaticamente nos extremos da trilha.
+
+--------------------------------------------------------------------------------
+7.4. Navbar.tsx
+--------------------------------------------------------------------------------
+Barra superior fixa:
+- Logotipo com degradê pastel suave de Pêssego (`#ffbe82`) até Cerúleo (`#6fb7db`).
+- Navegação entre as 5 telas da aplicação com estado ativo sinalizado por fundo `#1a2638` e borda celeste.
+- Menu seletor rápido de linguagem com ícones nativos de cada tecnologia.
+- Distintivo de Nível e XP (`userXp XP | Nv. userLevel`).
+- Sub-barra inferior responsiva para dispositivos móveis (smartphones e tablets).
+
+================================================================================
+8. PÁGINAS DA APLICAÇÃO (/src/pages/)
+================================================================================
+
+--------------------------------------------------------------------------------
+8.1. AcademiaPage.tsx
+--------------------------------------------------------------------------------
+A página central de estudo interativo:
+- Organização em Grid 3 Painéis:
+  * Painel Esquerdo (40% de largura): Renderiza o `TheoryPanel`.
+  * Painel Superior Direito: Renderiza o `CodeEditor`.
+  * Painel Inferior Direito: Renderiza o `ConsoleOutput`.
+- Barra Lateral de Exercícios:
+  Lista todas as lições da trilha ativa com indicador visual:
+  * Círculo verde preenchido para aulas concluídas.
+  * Círculo cinza vazado para aulas pendentes.
+  * Lição ativa destacada em `#152236` com borda lateral esquerda em azul cerúleo.
+- Modo Tela Cheia / Foco:
+  Um botão no topo com ícone de 3 Barras (Menu) permite recolher instantaneamente
+  a barra de exercícios com animação fluida, expandindo o editor e o terminal
+  para aproveitamento total da tela.
+
+--------------------------------------------------------------------------------
+8.2. HomePage.tsx
+--------------------------------------------------------------------------------
+Página de entrada:
+- Banner Hero com chamada dinâmica adaptada à linguagem selecionada.
+- Destaques rápidos com cartões das 3 primeiras lições da trilha ativa.
+- Grade completa com todas as 5 trilhas, exibindo o total de aulas e quantidade total de XP acumulável.
+
+--------------------------------------------------------------------------------
+8.3. ConquistasPage.tsx
+--------------------------------------------------------------------------------
+A central de gamificação:
+- Card 1: Nível do desenvolvedor com barra de progresso em gradiente até o próximo nível.
+- Card 2: Resumo das Missões Diárias concluídas no dia.
+- Card 3: Total de insígnias desbloqueadas sobre o total existente.
+- Seção "Missões de Hoje": Cada missão é um card individual com sua barra de progresso visual.
+- Seção "Galeria de Insígnias": Exibe medalhas desbloqueadas com ícones dourados/esmeralda e medalhas bloqueadas com opacidade reduzida e ícone de cadeado.
+
+--------------------------------------------------------------------------------
+8.4. PlaygroundPage.tsx
+--------------------------------------------------------------------------------
+Ambiente livre de codificação:
+- Permite alternar rapidamente entre Java, Python e JavaScript.
+- Possui um menu suspenso de "Presets" com códigos pré-configurados prontos para demonstração.
+- Não possui restrição de testes ou validações: o usuário pode criar qualquer algoritmo livremente.
+
+================================================================================
+9. ESTILIZAÇÃO E DESIGN SYSTEM DARK PASTEL (/src/index.css e /src/App.tsx)
+================================================================================
+
+A aplicação adota uma estética 100% Dark Mode com tons pastéis sofisticados:
+
+Paleta de Cores Hexadecimal:
+- Fundo Principal da Aplicação: `#0b101b` (Ardósia Profundo Neutro).
+- Fundo dos Cartões e Paineis: `#0f172a` e `#0e1626`.
+- Fundo do Editor de Código: `#09101a`.
+- Fundo da Calha de Linhas do Editor: `#070c14`.
+- Pêssego Pastel (`#ffbe82` / `#fca35d`): Botões primários de ação, destaques de XP e tags ativas.
+- Azul Celeste Pastel (`#9FD6F2`): Bordas sutis, títulos, textos do terminal e acentos.
+- Azul Cerúleo Pastel (`#6fb7db`): Seletores de linguagem e links de navegação.
+- Menta Pastel (`#86efac` / `#34d399`): Botão "Verificar", testes aprovados e lições concluídas.
+- Rosa Pastel (`#fca5a5`): Erros de compilação e execução no terminal.
+
+Classes Personalizadas no index.css:
+- `.aero-card`: Superfície escura com borda sutil `rgba(159, 214, 242, 0.12)` e sombra suave.
+- `.aero-btn-primary`: Botão em pêssego pastel com texto escuro de alto contraste (`#171007`) e efeito hover iluminado.
+- `.aero-btn-glass`: Botão translúcido com borda celeste pastel.
+- `.aero-btn-success`: Botão verde menta pastel para confirmação de exercícios.
+
+Iluminação Ambiente no App.tsx:
+Três elementos com `blur-3xl` e opacidade reduzida (10%) posicionados de forma fixa no fundo
+criam um suave brilho pastel nas extremidades da tela sem gerar cansaço visual.
+
+================================================================================
+10. PASSO A PASSO DE UM FLUXO COMPLETO (Tracing de Ação)
+================================================================================
+
+Cenário: O aluno está na aula "Java - Estrutura de uma Classe e Método main".
+1. O aluno digita `System.out.println("Olá, DualDev!");` no `CodeEditor`.
+2. O evento `onChange` dispara `handleCodeChange`:
+   - Atualiza o estado `editorCode` no React.
+   - Invoca `saveDraft('java-class-main', novoCodigo)` no `DualDevContext`.
+   - O código é salvo no `localStorage['dualdev_code_drafts']`.
+3. O aluno clica no botão "Verificar":
+   - A função `handleTestChallenge` na `AcademiaPage.tsx` é chamada.
+   - O estado `isTesting` vira `true` (ícone de carregamento começa a girar).
+   - `executeCode('java', editorCode)` é chamado.
+   - O `javaRunner.ts` valida a sintaxe (chaves, ponto e vírgula), localiza o `main` e executa a instrução.
+   - O resultado `{ stdout: "Olá, DualDev!\n", stderr: "", executionTimeMs: 4 }` é retornado.
+   - A lição possui um `testCase` com validador:
+     O validador confere que a saída contém "Olá, DualDev!".
+   - O teste retorna `{ passed: true, message: 'Mensagem exibida com sucesso!' }`.
+   - A aba ativa do console muda para `'tests'` e exibe o teste verde.
+4. Como todos os testes passaram (`allPassed === true`):
+   - A função `completeLesson('java-class-main')` do contexto é disparada.
+   - A aula entra no array `completedLessonIds`.
+   - O XP sobe em +20 pontos.
+   - Se o XP total atingir um novo múltiplo de 150, o `userLevel` é recalculado instantaneamente.
+   - A missão diária "Concluir 1 Lição" é marcada como concluída e concede seu bônus de XP.
+   - Todos os dados novos são persistidos no `localStorage`.
+   - Na barra lateral, o círculo da aula muda instantaneamente para um check verde com animação.
+
+================================================================================
+FIM DO MANUAL TÉCNICO EXAUSTIVO
+================================================================================

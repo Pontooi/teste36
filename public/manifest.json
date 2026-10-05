@@ -1,0 +1,28 @@
+{
+  "id": "/",
+  "name": "DualDev - Academia de Programação",
+  "short_name": "DualDev",
+  "description": "Aprenda Java, Python, JavaScript, HTML e CSS na prática com lições interativas e execução de código no celular.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0b101b",
+  "theme_color": "#0e1626",
+  "lang": "pt-BR",
+  "categories": ["education", "developer tools"],
+  "icons": [
+    {
+      "src": "./assets/icons/app-icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "./assets/icons/app-icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

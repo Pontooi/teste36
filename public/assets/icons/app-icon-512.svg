@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="pwa-bg-grad-512" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0e1626" />
+      <stop offset="100%" stop-color="#070c14" />
+    </linearGradient>
+    <linearGradient id="pwa-icon-grad-512" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffbe82" />
+      <stop offset="100%" stop-color="#6fb7db" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#pwa-bg-grad-512)" stroke="#1e293b" stroke-width="8"/>
+  <g transform="translate(96, 96)" stroke="url(#pwa-icon-grad-512)" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <polyline points="106 66 26 160 106 254" />
+    <polyline points="214 66 294 160 214 254" />
+    <line x1="192" y1="40" x2="128" y2="280" />
+  </g>
+</svg>
