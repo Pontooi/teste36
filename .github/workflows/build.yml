@@ -1,0 +1,82 @@
+name: Build & Deploy Mobile Web App
+
+# Este workflow compila a aplicação DualDev, verifica erros e faz o deploy
+# automático no GitHub Pages para que você possa rodar o app no celular
+# através de qualquer navegador ou instalá-lo como aplicativo (PWA).
+
+on:
+  push:
+    branches: ['main', 'master']
+  pull_request:
+    branches: ['main', 'master']
+  # Permite disparar o build manualmente na aba "Actions" do GitHub
+  workflow_dispatch:
+
+# Permissões necessárias para publicar no GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Garante apenas um deploy simultâneo para evitar conflitos
+concurrency:
+  group: 'pages'
+  cancel-in-progress: true
+
+jobs:
+  # ============================================================================
+  # 1. JOB DE COMPILAÇÃO E VERIFICAÇÃO DE CÓDIGO
+  # ============================================================================
+  build:
+    name: Compilar e Gerar Build Mobile
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar o código do repositório (Checkout)
+        uses: actions/checkout@v4
+
+      - name: Configurar o ambiente Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Instalar dependências do projeto
+        run: npm install --legacy-peer-deps
+
+      - name: Checar erros de tipagem e sintaxe (TypeScript Lint)
+        run: npm run lint
+
+      - name: Compilar o projeto com Vite (Build de Produção)
+        run: npm run build
+
+      - name: Configurar suporte ao GitHub Pages
+        uses: actions/configure-pages@v4
+
+      - name: Fazer upload dos arquivos compilados para o Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './dist'
+
+      - name: Salvar artefato zip do build para download manual
+        uses: actions/upload-artifact@v4
+        with:
+          name: dualdev-mobile-dist
+          path: './dist'
+          retention-days: 14
+
+  # ============================================================================
+  # 2. JOB DE PUBLICAÇÃO NO GITHUB PAGES (ACESSO NO CELULAR)
+  # ============================================================================
+  deploy:
+    name: Publicar no GitHub Pages
+    needs: build
+    # Executa apenas nos branches principais ou disparo manual
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fazer o deploy dos arquivos no GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
